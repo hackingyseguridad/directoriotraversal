@@ -1,4 +1,4 @@
 # directoriotrasversal
-# Exploit para extraer la password en paginas vulnerables a directorio traversal.
+# Exploit para extraer por http la password en la carperta Linux /etc/passwd, en paginas vulnerables a directorio traversal.
 # Usuario por defecto admin
-# USO - ./dir.py <hostname/IP>
+# USO - ./dir.py IP
