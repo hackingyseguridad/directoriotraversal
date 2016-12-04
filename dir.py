@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # Exploit para extraer la password en paginas vulnerables a directorio traversal.
 # Usuario por defecto admin
-#USO - ./dir.py <hostname/IP>
+# USO - ./dir.py <hostname/IP>
 import requests
 import re
 import sys
