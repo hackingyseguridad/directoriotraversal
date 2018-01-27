@@ -6,6 +6,7 @@
 # -s --silent muestra en pantalla los datos solicitados
 # -vvv Mostrar detalle en el resultado
 #
+# Uso.: ./urlssl.sh "https://url"
 # la url entre comillas ""
 #
 #!/bin/bash
