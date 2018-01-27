@@ -1,6 +1,6 @@
-#
+# 
 # Ver URL https SSL con curl
-#
+# https://linux.die.net/man/1/curl
 # curl
 # -k fuerza a SSL en modo inseguro
 # -s --silent muestra en pantalla los datos solicitados
