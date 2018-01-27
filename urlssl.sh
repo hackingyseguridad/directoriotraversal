@@ -6,7 +6,7 @@
 # -s --silent muestra en pantalla los datos solicitados
 # -vvv Mostrar detalle en el resultado
 #
-# Uso.: ./urlssl.sh "https://url"
+# Uso.: ./urlssl.sh "https://192.168.1.252:443/../../../../../../../etc/passwd"
 # la url entre comillas ""
 #
 #!/bin/bash
