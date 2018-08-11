@@ -24,7 +24,6 @@ for n in `cat diccionario.txt`
 
 do
         fqdn=$1$n
-        echo $fqdn
         if curl $fqdn -I --silent|grep "HTTP/1.1 200 OK"
         then echo $fqdn
         fi
