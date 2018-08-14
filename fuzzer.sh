@@ -24,7 +24,7 @@ for n in `cat diccionario.txt`
 
 do
         fqdn=$1$n
-        if curl $fqdn -I --silent|grep "200"
+        if curl $fqdn --path-as-is -I --silent|grep "200"
         then echo $fqdn
         fi
 done
