@@ -5,7 +5,7 @@
 # -vvv Mostrar detalle en el resultado
 #
 # Uso.: ./dirhttp.sh "http://192.168.1.252:80/../../../../../../../etc/passwd"
-# la url entre comillas ""
+# 
 #
 #!/bin/bash
 echo "Uso.: ./dirhttp.sh http://url"
