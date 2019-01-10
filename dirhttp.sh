@@ -16,4 +16,4 @@ curl --insecure --silent -vvv --compressed \
 -H "Accept-Encoding: gzip, deflate, br" \
 -H "Connection: keep-alive" \
 -H "Upgrade-Insecure-Requests: 1" \
-"http://$1"
+"$1"
