@@ -1,3 +1,6 @@
+# Generate CA key & certificate
+#!/bin/sh
+#
 # Instalación OpenSSL
 sudo apt-get install openssl
 
