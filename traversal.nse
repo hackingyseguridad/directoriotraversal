@@ -1,5 +1,5 @@
 description = [[
-Path traversal Script para Nmap
+Path traversal script para Nmap
 ]]
 
 local http = require "http"
