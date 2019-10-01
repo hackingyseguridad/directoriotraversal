@@ -26,7 +26,7 @@ action = function(host, port)
     description = [[
     ]],
     IDS = {
-        CVE = "CVE-2019-XXXX"
+        CWE = "CWE-22"
     },
     references = {
         'http://www.hackingyseguridad.com',
