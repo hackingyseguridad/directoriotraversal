@@ -26,13 +26,13 @@ action = function(host, port)
     description = [[
     ]],
     IDS = {
-        CVE = "CVE-2019-XXXX"
+        CWE = "CWE-22"
     },
     references = {
         'http://www.hackingyseguridad.com',
     },
     dates = {
-        disclosure = { year = '2019', month = '04', day = '24' }
+        disclosure = { year = '2001', month = '04', day = '24' }
     }
   }
 
