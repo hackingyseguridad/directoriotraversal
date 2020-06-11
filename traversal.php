@@ -1,4 +1,6 @@
-https://hackingyseguridad.com/traversal.php?file=../../../../../../../../../../etc/passwd
+// Ejemplo de php para directorio traversal
+// https://hackingyseguridad.com/traversal.php?file=../../../../../../../../../../etc/passwd
+//
 
 <?php
 $server_name = $_SERVER['SERVER_NAME'];
