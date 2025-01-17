@@ -4,7 +4,7 @@
 read -p "Introduce la URL para probar Path Traversal: " url
 
 # Comprobar si el fichero xss.txt existe
-if [[ ! -f xss.txt ]]; then
+if [[ ! -f diccionario.txt ]]; then
     echo "El fichero diccionario.txt no existe. Por favor, crea el fichero con los payloads de Path Traversal."
     exit 1
 fi
