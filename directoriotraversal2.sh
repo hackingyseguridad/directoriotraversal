@@ -1,14 +1,8 @@
 #!/bin/bash
-
+# hackingyseguridad.com 2025
+# el fichero diccionario.txt debe contener los paiload de Path traversal
 # Pedir al usuario que introduzca la URL
 read -p "Introduce la URL para probar Path Traversal: " url
-
-# Comprobar si el fichero xss.txt existe
-if [[ ! -f xss.txt ]]; then
-    echo "El fichero diccionario.txt no existe. Por favor, crea el fichero con los payloads de Path Traversal."
-    exit 1
-fi
-
 # Función para probar Path Traversal en una URL dada
 test_path_traversal() {
     while IFS= read -r payload; do
@@ -20,7 +14,6 @@ test_path_traversal() {
         echo "Status Code: $response " | grep "Status Code: 200" && echo " - URL: $test_url"
     done < diccionario.txt
 }
-
 # Ejecutar las pruebas de Path Traversal
 test_path_traversal
 
