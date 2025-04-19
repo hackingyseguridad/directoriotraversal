@@ -20,7 +20,7 @@ echo
 echo "Fuzzer de: " $1
 echo
 
-for n in `cat diccionario.txt`
+for n in `cat pathtraversal.txt`
 
 do
         fqdn=$1$n
