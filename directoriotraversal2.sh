@@ -12,7 +12,7 @@ test_path_traversal() {
         response=$(curl -s -o /dev/null -w "%{http_code}" "$test_url")
         # Imprimir el código de estado y la URL
         echo "Status Code: $response " | grep "Status Code: 200" && echo " - URL: $test_url"
-    done < diccionario.txt
+    done < pathtraversal.txt
 }
 # Ejecutar las pruebas de Path Traversal
 test_path_traversal
