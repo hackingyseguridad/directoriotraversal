@@ -1,6 +1,12 @@
 ## directoriotrasversal
 ##
 Path Traversal (o Directory Traversal) es una vulnerabilidad web que permite a un atacante acceder a archivos y directorios fuera del directorio raíz del servidor web.
+
+se manipula parámetros de la URL o inputs que contienen rutas de archivos (como ../../) para moverse por las carpertas del servidor.
+
+Si el servidor no valida correctamente las entradas, puede exponer archivos sensibles como:
+
+Configuraciones (/etc/passwd en Linux).
 #
 ## Exploits para explotar la vulnerabilidade de directorio trasversal o path traversal.
 #
