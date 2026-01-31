@@ -114,9 +114,10 @@ print_info() {
     echo -e "${BLUE}[*] $1${NC}"
 }
 
-# Cargar vectores desde archivo
+# Variables globales para vectores
 declare -A VECTORS_BASIC VECTORS_ENCODED VECTORS_NULLBYTE VECTORS_ADVANCED VECTORS_WINDOWS VECTORS_CUSTOM
 
+# Cargar vectores desde archivo
 load_vectors() {
     local vectors_file="$1"
     
@@ -305,33 +306,80 @@ test_path_traversal() {
     return 3
 }
 
-# Función para probar vectores con diferentes parámetros
-test_vector_with_params() {
-    local base_url="$1"
-    local vector="$2"
-    local description="$3"
-    local vector_type="$4"
-    local output_file="$5"
-    local test_number="$6"
+# Función para probar un grupo de vectores
+test_vector_group() {
+    local vector_type="$1"
+    local target="$2"
+    local output_file="$3"
+    local test_counter_ref="$4"
+    local test_timeout_ref="$5"
+    local test_error_ref="$6"
     
-    local params="file path src doc filename page template include"
-    local successes=0
+    # Usar nameref para las variables que queremos modificar
+    local -n test_counter="$test_counter_ref"
+    local -n test_timeout="$test_timeout_ref"
+    local -n test_error="$test_error_ref"
     
-    for param in $params; do
-        local test_url="${base_url}?${param}=${vector}"
-        test_path_traversal "$test_url" "$description (param: $param)" "$output_file" "${test_number}.${param}" "$vector_type"
-        if [ $? -eq 0 ]; then
-            successes=$((successes + 1))
-        fi
-    done
+    # Determinar qué array de vectores usar
+    local vector_array_name="VECTORS_${vector_type^^}"
+    local -n vectors="$vector_array_name"
     
-    # También probar acceso directo si el vector parece una ruta
-    if [[ "$vector" == /* ]] || [[ "$vector" == ..* ]] || [[ "$vector" == *%* ]]; then
-        test_path_traversal "${base_url}${vector}" "$description (direct)" "$output_file" "${test_number}.direct" "$vector_type"
-        [ $? -eq 0 ] && successes=$((successes + 1))
+    if [ ${#vectors[@]} -eq 0 ]; then
+        return 0
     fi
     
-    return $successes
+    print_info "Probando vectores $vector_type (${#vectors[@]} vectores)..."
+    echo "" >> "$output_file"
+    echo "=== TESTING $vector_type VECTORS ===" >> "$output_file"
+    
+    local group_success=0
+    
+    for description in "${!vectors[@]}"; do
+        local vector="${vectors[$description]}"
+        test_counter=$((test_counter + 1))
+        
+        echo "" >> "$output_file"
+        echo "--- Vector $test_counter: $description ---" >> "$output_file"
+        
+        # Probar con diferentes métodos
+        local successes=0
+        
+        # Método 1: Como parámetro GET
+        for param in file path src; do
+            local test_url="${target}?${param}=${vector}"
+            test_path_traversal "$test_url" "$description (GET $param)" "$output_file" "$test_counter.$param" "$vector_type"
+            local result=$?
+            [ $result -eq 0 ] && successes=$((successes + 1))
+            [ $result -eq 4 ] && test_timeout=$((test_timeout + 1))
+            [ $result -eq 5 ] && test_error=$((test_error + 1))
+        done
+        
+        # Método 2: Acceso directo (si parece una ruta)
+        if [[ "$vector" =~ ^(\.\.|/|%|\\\\) ]]; then
+            local test_url="${target}${vector}"
+            test_path_traversal "$test_url" "$description (direct)" "$output_file" "$test_counter.direct" "$vector_type"
+            local result=$?
+            [ $result -eq 0 ] && successes=$((successes + 1))
+            [ $result -eq 4 ] && test_timeout=$((test_timeout + 1))
+            [ $result -eq 5 ] && test_error=$((test_error + 1))
+        fi
+        
+        if [ $successes -gt 0 ]; then
+            group_success=$((group_success + 1))
+            print_success "Vector $vector_type exitoso: $description"
+        fi
+        
+        # Control de timeouts
+        if [ $test_timeout -ge 5 ]; then
+            print_warning "Demasiados timeouts, continuando con siguiente tipo de vector"
+            break
+        fi
+        
+        # Pequeña pausa entre vectores
+        sleep 0.1
+    done
+    
+    return $group_success
 }
 
 # Cargar vectores
@@ -379,12 +427,12 @@ while IFS= read -r TARGET || [ -n "$TARGET" ]; do
     
     # Listar vectores cargados
     echo "VECTORS TO TEST:" >> "$URL_OUTPUT"
-    for type in basic encoded nullbyte advanced windows custom; do
-        declare -n vectors="VECTORS_${type^^}"
-        if [ ${#vectors[@]} -gt 0 ]; then
-            echo "  $type: ${#vectors[@]}" >> "$URL_OUTPUT"
-        fi
-    done
+    echo "  basic: ${#VECTORS_BASIC[@]}" >> "$URL_OUTPUT"
+    echo "  encoded: ${#VECTORS_ENCODED[@]}" >> "$URL_OUTPUT"
+    echo "  nullbyte: ${#VECTORS_NULLBYTE[@]}" >> "$URL_OUTPUT"
+    echo "  advanced: ${#VECTORS_ADVANCED[@]}" >> "$URL_OUTPUT"
+    echo "  windows: ${#VECTORS_WINDOWS[@]}" >> "$URL_OUTPUT"
+    echo "  custom: ${#VECTORS_CUSTOM[@]}" >> "$URL_OUTPUT"
     echo "" >> "$URL_OUTPUT"
     
     # Primero probar conexión básica
@@ -403,32 +451,34 @@ while IFS= read -r TARGET || [ -n "$TARGET" ]; do
     fi
     
     # Variables para esta URL
-    declare -A SUCCESS_BY_TYPE
-    SUCCESS_BY_TYPE[basic]=0
-    SUCCESS_BY_TYPE[encoded]=0
-    SUCCESS_BY_TYPE[nullbyte]=0
-    SUCCESS_BY_TYPE[advanced]=0
-    SUCCESS_BY_TYPE[windows]=0
-    SUCCESS_BY_TYPE[custom]=0
+    SUCCESS_BASIC=0
+    SUCCESS_ENCODED=0
+    SUCCESS_NULLBYTE=0
+    SUCCESS_ADVANCED=0
+    SUCCESS_WINDOWS=0
+    SUCCESS_CUSTOM=0
     
     test_timeout=0
     test_error=0
     TEST_COUNTER=0
     
-    # Función para probar un grupo de vectores
-    test_vector_group() {
-        local vector_type="$1"
-        declare -n vectors="VECTORS_${vector_type^^}"
+    # Probar cada tipo de vector
+    for type in basic encoded nullbyte advanced windows custom; do
+        # Determinar qué variable de éxito usar
+        local success_var_name="SUCCESS_${type^^}"
+        local -n success_var="$success_var_name"
+        
+        # Determinar qué array de vectores usar
+        local vector_array_name="VECTORS_${type^^}"
+        local -n vectors="$vector_array_name"
         
         if [ ${#vectors[@]} -eq 0 ]; then
-            return 0
+            continue
         fi
         
-        print_info "Probando vectores $vector_type (${#vectors[@]} vectores)..."
+        print_info "Probando vectores $type (${#vectors[@]} vectores)..."
         echo "" >> "$URL_OUTPUT"
-        echo "=== TESTING $vector_type VECTORS ===" >> "$URL_OUTPUT"
-        
-        local group_success=0
+        echo "=== TESTING $type VECTORS ===" >> "$URL_OUTPUT"
         
         for description in "${!vectors[@]}"; do
             local vector="${vectors[$description]}"
@@ -443,63 +493,46 @@ while IFS= read -r TARGET || [ -n "$TARGET" ]; do
             # Método 1: Como parámetro GET
             for param in file path src; do
                 local test_url="${TARGET}?${param}=${vector}"
-                test_path_traversal "$test_url" "$description (GET $param)" "$URL_OUTPUT" "$TEST_COUNTER.$param" "$vector_type"
-                [ $? -eq 0 ] && successes=$((successes + 1))
+                test_path_traversal "$test_url" "$description (GET $param)" "$URL_OUTPUT" "$TEST_COUNTER.$param" "$type"
+                local result=$?
+                if [ $result -eq 0 ]; then
+                    successes=$((successes + 1))
+                    success_var=$((success_var + 1))
+                elif [ $result -eq 4 ]; then
+                    test_timeout=$((test_timeout + 1))
+                elif [ $result -eq 5 ]; then
+                    test_error=$((test_error + 1))
+                fi
             done
             
             # Método 2: Acceso directo (si parece una ruta)
             if [[ "$vector" =~ ^(\.\.|/|%|\\\\) ]]; then
                 local test_url="${TARGET}${vector}"
-                test_path_traversal "$test_url" "$description (direct)" "$URL_OUTPUT" "$TEST_COUNTER.direct" "$vector_type"
-                [ $? -eq 0 ] && successes=$((successes + 1))
-            fi
-            
-            # Método 3: POST (solo para algunos vectores)
-            if [[ "$vector_type" == "basic" ]] || [[ "$vector_type" == "nullbyte" ]]; then
-                echo "" >> "$URL_OUTPUT"
-                echo "Testing POST with vector..." >> "$URL_OUTPUT"
-                response=$(timeout $MAX_TIME curl -s -k --connect-timeout $CONNECT_TIMEOUT -m $MAX_TIME -X POST -d "file=${vector}" -w "|HTTP_STATUS:%{http_code}" "$TARGET" 2>&1)
-                
-                if ! echo "$response" | grep -q "timed out\|Operation timed out\|timeout"; then
-                    http_status=$(echo "$response" | grep -o "HTTP_STATUS:[0-9]*" | cut -d: -f2)
-                    if [ "$http_status" = "200" ]; then
-                        content=$(echo "$response" | sed 's/|HTTP_STATUS:.*//')
-                        if echo "$content" | grep -i -q -E "root:|\[boot loader\]"; then
-                            echo "RESULTADO: VULNERABLE via POST" >> "$URL_OUTPUT"
-                            successes=$((successes + 1))
-                        fi
-                    fi
+                test_path_traversal "$test_url" "$description (direct)" "$URL_OUTPUT" "$TEST_COUNTER.direct" "$type"
+                local result=$?
+                if [ $result -eq 0 ]; then
+                    successes=$((successes + 1))
+                    success_var=$((success_var + 1))
+                elif [ $result -eq 4 ]; then
+                    test_timeout=$((test_timeout + 1))
+                elif [ $result -eq 5 ]; then
+                    test_error=$((test_error + 1))
                 fi
             fi
             
             if [ $successes -gt 0 ]; then
-                group_success=$((group_success + 1))
-                SUCCESS_BY_TYPE[$vector_type]=$((SUCCESS_BY_TYPE[$vector_type] + 1))
-                print_success "Vector $vector_type exitoso: $description"
+                print_success "Vector $type exitoso: $description"
             fi
             
             # Control de timeouts
             if [ $test_timeout -ge 5 ]; then
                 print_warning "Demasiados timeouts, continuando con siguiente tipo de vector"
-                break
+                break 2
             fi
             
             # Pequeña pausa entre vectores
             sleep 0.1
         done
-        
-        return $group_success
-    }
-    
-    # Probar cada tipo de vector
-    for type in basic encoded nullbyte advanced windows custom; do
-        test_vector_group "$type"
-        
-        # Si hay muchos timeouts, saltar al siguiente URL
-        if [ $test_timeout -ge 5 ]; then
-            print_error "Demasiados timeouts para $TARGET - Saltando al siguiente URL"
-            break
-        fi
     done
     
     # ============================================================================
@@ -517,15 +550,21 @@ while IFS= read -r TARGET || [ -n "$TARGET" ]; do
     echo "" >> "$URL_OUTPUT"
     
     # Calcular vulnerabilidades totales
-    local vuln_count=0
-    for type in "${!SUCCESS_BY_TYPE[@]}"; do
-        [ ${SUCCESS_BY_TYPE[$type]} -gt 0 ] && vuln_count=$((vuln_count + 1))
-    done
+    vuln_count=0
+    [ $SUCCESS_BASIC -gt 0 ] && vuln_count=$((vuln_count + 1))
+    [ $SUCCESS_ENCODED -gt 0 ] && vuln_count=$((vuln_count + 1))
+    [ $SUCCESS_NULLBYTE -gt 0 ] && vuln_count=$((vuln_count + 1))
+    [ $SUCCESS_ADVANCED -gt 0 ] && vuln_count=$((vuln_count + 1))
+    [ $SUCCESS_WINDOWS -gt 0 ] && vuln_count=$((vuln_count + 1))
+    [ $SUCCESS_CUSTOM -gt 0 ] && vuln_count=$((vuln_count + 1))
     
     echo "VULNERABILIDADES DETECTADAS POR TIPO:" >> "$URL_OUTPUT"
-    for type in basic encoded nullbyte advanced windows custom; do
-        echo "  $type: ${SUCCESS_BY_TYPE[$type]} vectores exitosos" >> "$URL_OUTPUT"
-    done
+    echo "  basic: $SUCCESS_BASIC vectores exitosos" >> "$URL_OUTPUT"
+    echo "  encoded: $SUCCESS_ENCODED vectores exitosos" >> "$URL_OUTPUT"
+    echo "  nullbyte: $SUCCESS_NULLBYTE vectores exitosos" >> "$URL_OUTPUT"
+    echo "  advanced: $SUCCESS_ADVANCED vectores exitosos" >> "$URL_OUTPUT"
+    echo "  windows: $SUCCESS_WINDOWS vectores exitosos" >> "$URL_OUTPUT"
+    echo "  custom: $SUCCESS_CUSTOM vectores exitosos" >> "$URL_OUTPUT"
     echo "" >> "$URL_OUTPUT"
     
     echo "Total de tipos de vectores exitosos: $vuln_count/6" >> "$URL_OUTPUT"
@@ -549,18 +588,23 @@ while IFS= read -r TARGET || [ -n "$TARGET" ]; do
         TOTAL_VULNERABLE=$((TOTAL_VULNERABLE + 1))
         
         # Detalle de vectores exitosos
-        local success_detail=""
-        for type in "${!SUCCESS_BY_TYPE[@]}"; do
-            if [ ${SUCCESS_BY_TYPE[$type]} -gt 0 ]; then
-                success_detail="${success_detail} ${type}:${SUCCESS_BY_TYPE[$type]}"
-            fi
-        done
+        success_detail=""
+        [ $SUCCESS_BASIC -gt 0 ] && success_detail="${success_detail} basic:$SUCCESS_BASIC"
+        [ $SUCCESS_ENCODED -gt 0 ] && success_detail="${success_detail} encoded:$SUCCESS_ENCODED"
+        [ $SUCCESS_NULLBYTE -gt 0 ] && success_detail="${success_detail} nullbyte:$SUCCESS_NULLBYTE"
+        [ $SUCCESS_ADVANCED -gt 0 ] && success_detail="${success_detail} advanced:$SUCCESS_ADVANCED"
+        [ $SUCCESS_WINDOWS -gt 0 ] && success_detail="${success_detail} windows:$SUCCESS_WINDOWS"
+        [ $SUCCESS_CUSTOM -gt 0 ] && success_detail="${success_detail} custom:$SUCCESS_CUSTOM"
+        
         VULNERABLE_URLS="${VULNERABLE_URLS}\n- $TARGET ($vuln_count tipos:${success_detail})"
         
         echo "Vectores exitosos por tipo:" >> "$MASTER_OUTPUT"
-        for type in basic encoded nullbyte advanced windows custom; do
-            [ ${SUCCESS_BY_TYPE[$type]} -gt 0 ] && echo "  - $type: ${SUCCESS_BY_TYPE[$type]}" >> "$MASTER_OUTPUT"
-        done
+        [ $SUCCESS_BASIC -gt 0 ] && echo "  - basic: $SUCCESS_BASIC" >> "$MASTER_OUTPUT"
+        [ $SUCCESS_ENCODED -gt 0 ] && echo "  - encoded: $SUCCESS_ENCODED" >> "$MASTER_OUTPUT"
+        [ $SUCCESS_NULLBYTE -gt 0 ] && echo "  - nullbyte: $SUCCESS_NULLBYTE" >> "$MASTER_OUTPUT"
+        [ $SUCCESS_ADVANCED -gt 0 ] && echo "  - advanced: $SUCCESS_ADVANCED" >> "$MASTER_OUTPUT"
+        [ $SUCCESS_WINDOWS -gt 0 ] && echo "  - windows: $SUCCESS_WINDOWS" >> "$MASTER_OUTPUT"
+        [ $SUCCESS_CUSTOM -gt 0 ] && echo "  - custom: $SUCCESS_CUSTOM" >> "$MASTER_OUTPUT"
     else
         echo "Estado: SAFE" >> "$MASTER_OUTPUT"
         echo "Tests realizados: $TEST_COUNTER" >> "$MASTER_OUTPUT"
@@ -578,11 +622,12 @@ while IFS= read -r TARGET || [ -n "$TARGET" ]; do
         
         echo "" >> "$URL_OUTPUT"
         echo "VECTORES EXITOSOS:" >> "$URL_OUTPUT"
-        for type in "${!SUCCESS_BY_TYPE[@]}"; do
-            if [ ${SUCCESS_BY_TYPE[$type]} -gt 0 ]; then
-                echo "  - $type: ${SUCCESS_BY_TYPE[$type]} vectores" >> "$URL_OUTPUT"
-            fi
-        done
+        [ $SUCCESS_BASIC -gt 0 ] && echo "  - basic: $SUCCESS_BASIC vectores" >> "$URL_OUTPUT"
+        [ $SUCCESS_ENCODED -gt 0 ] && echo "  - encoded: $SUCCESS_ENCODED vectores" >> "$URL_OUTPUT"
+        [ $SUCCESS_NULLBYTE -gt 0 ] && echo "  - nullbyte: $SUCCESS_NULLBYTE vectores" >> "$URL_OUTPUT"
+        [ $SUCCESS_ADVANCED -gt 0 ] && echo "  - advanced: $SUCCESS_ADVANCED vectores" >> "$URL_OUTPUT"
+        [ $SUCCESS_WINDOWS -gt 0 ] && echo "  - windows: $SUCCESS_WINDOWS vectores" >> "$URL_OUTPUT"
+        [ $SUCCESS_CUSTOM -gt 0 ] && echo "  - custom: $SUCCESS_CUSTOM vectores" >> "$URL_OUTPUT"
         
         echo "" >> "$URL_OUTPUT"
         echo "IMPACTO:" >> "$URL_OUTPUT"
@@ -612,106 +657,34 @@ while IFS= read -r TARGET || [ -n "$TARGET" ]; do
     echo "" >> "$URL_OUTPUT"
     echo "==================================================" >> "$URL_OUTPUT"
     echo "Análisis completado: $(date)" >> "$URL_OUTPUT"
-    echo "Tiempo total estimado: ~$((TEST_COUNTER * 2))s" >> "$URL_OUTPUT"
+    if [ $TEST_COUNTER -gt 0 ]; then
+        echo "Tiempo total estimado: ~$((TEST_COUNTER * 2))s" >> "$URL_OUTPUT"
+    fi
     
     # Mostrar resumen de esta URL en pantalla
     echo ""
     echo "Resumen para $TARGET:"
     echo "  Tests realizados: $TEST_COUNTER"
     echo "  Timeouts: $test_timeout"
-    echo "  Estado: $([ $vuln_count -gt 0 ] && echo -e "${RED}VULNERABLE${NC}" || ([ $test_timeout -ge 3 ] && echo -e "${YELLOW}TIMEOUT${NC}") || echo -e "${GREEN}SAFE${NC}")"
+    
+    if [ $vuln_count -gt 0 ]; then
+        echo -n "  Estado: ${RED}VULNERABLE${NC}"
+    elif [ $test_timeout -ge 3 ]; then
+        echo -n "  Estado: ${YELLOW}TIMEOUT${NC}"
+    else
+        echo -n "  Estado: ${GREEN}SAFE${NC}"
+    fi
+    echo ""
+    
     echo "  Tipos exitosos: $vuln_count/6"
-    for type in "${!SUCCESS_BY_TYPE[@]}"; do
-        if [ ${SUCCESS_BY_TYPE[$type]} -gt 0 ]; then
-            echo "    $type: ${SUCCESS_BY_TYPE[$type]} vectores"
-        fi
-    done
+    [ $SUCCESS_BASIC -gt 0 ] && echo "    basic: $SUCCESS_BASIC vectores"
+    [ $SUCCESS_ENCODED -gt 0 ] && echo "    encoded: $SUCCESS_ENCODED vectores"
+    [ $SUCCESS_NULLBYTE -gt 0 ] && echo "    nullbyte: $SUCCESS_NULLBYTE vectores"
+    [ $SUCCESS_ADVANCED -gt 0 ] && echo "    advanced: $SUCCESS_ADVANCED vectores"
+    [ $SUCCESS_WINDOWS -gt 0 ] && echo "    windows: $SUCCESS_WINDOWS vectores"
+    [ $SUCCESS_CUSTOM -gt 0 ] && echo "    custom: $SUCCESS_CUSTOM vectores"
+    
     echo "  Reporte detallado: $URL_OUTPUT"
     echo ""
     
-    # Pequeña pausa entre URLs para no saturar
-    sleep 1
-    
-done < <(grep -v '^#' "$URL_FILE" | grep -v '^$')
-
-# ============================================================================
-# RESUMEN GLOBAL
-# ============================================================================
-echo ""
-echo "=================================================="
-echo "             RESUMEN GLOBAL DEL ANÁLISIS"
-echo "=================================================="
-echo "Archivo de URLs: $URL_FILE"
-echo "Archivo de vectores: $VECTORS_FILE"
-echo "Total de URLs en archivo: $URL_COUNT"
-echo "URLs procesadas: $URL_NUMBER"
-echo "Vectores cargados: $VECTOR_COUNT"
-echo ""
-echo "RESULTADOS:"
-echo "  URLs vulnerables: $TOTAL_VULNERABLE"
-echo "  URLs con timeout: $TOTAL_TIMEOUT"
-echo "  URLs con error conexión: $TOTAL_ERRORS"
-echo "  URLs seguras: $((URL_NUMBER - TOTAL_VULNERABLE - TOTAL_TIMEOUT - TOTAL_ERRORS))"
-echo ""
-
-if [ $TOTAL_VULNERABLE -gt 0 ]; then
-    echo -e "${RED}URLs VULNERABLES:${NC}"
-    echo -e "$VULNERABLE_URLS"
-    echo ""
-fi
-
-if [ $TOTAL_TIMEOUT -gt 0 ]; then
-    echo -e "${YELLOW}URLs CON TIMEOUT:${NC}"
-    echo -e "$TIMEOUT_URLS"
-    echo ""
-fi
-
-if [ $TOTAL_ERRORS -gt 0 ]; then
-    echo -e "${RED}URLs CON ERROR:${NC}"
-    echo -e "$ERROR_URLS"
-    echo ""
-fi
-
-if [ $((URL_NUMBER - TOTAL_VULNERABLE - TOTAL_TIMEOUT - TOTAL_ERRORS)) -gt 0 ]; then
-    echo -e "${GREEN}URLs SEGURAS:${NC}"
-    echo -e "$SAFE_URLS"
-    echo ""
-fi
-
-# Generar reporte maestro final
-MASTER_FINAL="/tmp/path_traversal_final_report_$$.txt"
-echo "==================================================" > "$MASTER_FINAL"
-echo "       REPORTE MAESTRO PATH TRAVERSAL" >> "$MASTER_FINAL"
-echo "       Fecha: $(date)" >> "$MASTER_FINAL"
-echo "       Configuración:" >> "$MASTER_FINAL"
-echo "       - URLs: $URL_FILE" >> "$MASTER_FINAL"
-echo "       - Vectores: $VECTORS_FILE" >> "$MASTER_FINAL"
-echo "       - Timeout conexión: ${CONNECT_TIMEOUT}s" >> "$MASTER_FINAL"
-echo "       - Timeout total: ${MAX_TIME}s" >> "$MASTER_FINAL"
-echo "==================================================" >> "$MASTER_FINAL"
-echo "" >> "$MASTER_FINAL"
-echo "ARCHIVOS DE ENTRADA:" >> "$MASTER_FINAL"
-echo "  URLs: $URL_FILE ($URL_COUNT URLs)" >> "$MASTER_FINAL"
-echo "  Vectores: $VECTORS_FILE ($VECTOR_COUNT vectores)" >> "$MASTER_FINAL"
-echo "" >> "$MASTER_FINAL"
-echo "RESULTADOS:" >> "$MASTER_FINAL"
-echo "  URLs procesadas: $URL_NUMBER" >> "$MASTER_FINAL"
-echo "  URLs vulnerables: $TOTAL_VULNERABLE" >> "$MASTER_FINAL"
-echo "  URLs con timeout: $TOTAL_TIMEOUT" >> "$MASTER_FINAL"
-echo "  URLs con error conexión: $TOTAL_ERRORS" >> "$MASTER_FINAL"
-echo "  URLs seguras: $((URL_NUMBER - TOTAL_VULNERABLE - TOTAL_TIMEOUT - TOTAL_ERRORS))" >> "$MASTER_FINAL"
-echo "" >> "$MASTER_FINAL"
-
-if [ $TOTAL_VULNERABLE -gt 0 ]; then
-    echo "URLs VULNERABLES:" >> "$MASTER_FINAL"
-    echo -e "$VULNERABLE_URLS" | sed 's/\\n/\n/g' >> "$MASTER_FINAL"
-    echo "" >> "$MASTER_FINAL"
-fi
-
-if [ $TOTAL_TIMEOUT -gt 0 ]; then
-    echo "URLs CON TIMEOUT:" >> "$MASTER_FINAL"
-    echo -e "$TIMEOUT_URLS" | sed 's/\\n/\n/g' >> "$MASTER_FINAL"
-    echo "" >> "$MASTER_FINAL"
-fi
-
-if [ $TOTAL_ERRORS -gt 0 ]; then
+    # Pe
