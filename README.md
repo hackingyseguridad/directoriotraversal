@@ -6,11 +6,9 @@
 
 Colección de scripts en **Bash**, **Python** y **NSE (Nmap)** para detectar y verificar vulnerabilidades de **Path Traversal / Directory Traversal** en servidores web, incluyendo pruebas específicas para varios CVE conocidos.
 
-> 📌 Proyecto mantenido por [hackingyseguridad.com](http://www.hackingyseguridad.com/)
-
 ---
 
-## 📑 Tabla de contenidos
+### 📑 Tabla de contenidos
 
 - [¿Qué es Path Traversal?](#-qué-es-path-traversal)
 - [¿Qué incluye este repositorio?](#-qué-incluye-este-repositorio)
@@ -28,7 +26,7 @@ Colección de scripts en **Bash**, **Python** y **NSE (Nmap)** para detectar y v
 
 ---
 
-### ¿Qué es Path Traversal?
+###  Path Traversal
 
 **Path Traversal** (también llamado *Directory Traversal*) es una vulnerabilidad web que permite a un atacante **salir del directorio raíz** de una aplicación y acceder a archivos y carpetas del sistema que no deberían ser accesibles públicamente.
 
@@ -62,7 +60,7 @@ curl --path-as-is -k -v http://<ip>:80/../../../../../../windows/system32/cmd.ex
 
 ---
 
-## 📦 ¿Qué incluye este repositorio?
+### ¿Qué incluye este repositorio?
 
 | Categoría | Cantidad | Descripción |
 |---|---|---|
@@ -138,7 +136,7 @@ Para obtener/actualizar el diccionario de payloads:
 
 ---
 
-## 🛠️ Herramientas generales
+### Herramientas generales
 
 | Script | Lenguaje | Función |
 |---|---|---|
