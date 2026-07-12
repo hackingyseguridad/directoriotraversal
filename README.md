@@ -201,16 +201,9 @@ Referencia completa: [RFC 2616 - Códigos de estado HTTP](https://www.w3.org/Pro
 
 ---
 
----
-
-
-
-Para reportar bugs o sugerir nuevas CVE a incluir, abre un [Issue](https://github.com/hackingyseguridad/directoriotraversal/issues).
-
----
-
 #
 [www.hackingyseguridad.com](http://www.hackingyseguridad.com/)
+
 [diccionarios/pathtraversal.txt](https://github.com/hackingyseguridad/diccionarios/blob/master/pathtraversal.txt)
 #
 
